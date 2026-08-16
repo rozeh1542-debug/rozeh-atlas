@@ -1,0 +1,173 @@
+<!doctype html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>اطلس پیشرفت طرح احیای روضه‌های خانگی</title>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<style>
+:root{
+ --ink:#3f3025;--muted:#76675d;--cream:#f8f0df;--paper:#fffaf0;
+ --green:#315f4b;--green2:#5f806b;--gold:#c49a52;--burg:#7b3040;
+ --line:#e5d7bf;--shadow:0 12px 35px rgba(69,48,28,.10)
+}
+*{box-sizing:border-box}body{margin:0;font-family:Tahoma,"Segoe UI",sans-serif;color:var(--ink);
+background:radial-gradient(circle at 15% 10%,rgba(196,154,82,.18),transparent 28%),
+linear-gradient(135deg,#fbf5e8,#f4ead7);min-height:100vh}
+body:before{content:"";position:fixed;inset:0;pointer-events:none;opacity:.045;
+background-image:radial-gradient(#7b3040 1px,transparent 1px);background-size:22px 22px}
+header{padding:26px 18px 18px;text-align:center;background:linear-gradient(180deg,rgba(49,95,75,.98),rgba(49,95,75,.93));color:#fff;box-shadow:var(--shadow)}
+.logo{width:74px;height:74px;border:2px solid rgba(255,255,255,.6);border-radius:50%;margin:auto;display:grid;place-items:center;font-size:34px;background:rgba(255,255,255,.1)}
+h1{margin:12px 0 5px;font-size:clamp(20px,4vw,32px)}header p{margin:0;color:#f7ead2}
+.container{max-width:1280px;margin:auto;padding:22px}
+.section-title{display:flex;align-items:center;gap:10px;margin:26px 0 14px}.section-title h2{margin:0;font-size:20px}
+.section-title:after{content:"";height:2px;flex:1;background:linear-gradient(90deg,transparent,var(--gold))}
+.metrics{display:grid;grid-template-columns:repeat(5,1fr);gap:12px}
+.card{background:rgba(255,250,240,.92);border:1px solid var(--line);border-radius:18px;padding:16px;box-shadow:var(--shadow);text-align:center}
+.card .num{font-size:28px;font-weight:800;color:var(--green);margin-top:7px}.card .label{font-size:13px;color:var(--muted);line-height:1.8}
+#map{height:620px;border-radius:22px;border:1px solid var(--line);box-shadow:var(--shadow);overflow:hidden;background:#efe4d1}
+.map-wrap{position:relative}.map-note{position:absolute;z-index:500;top:12px;right:12px;background:rgba(255,250,240,.93);padding:10px 13px;border-radius:12px;font-size:12px;box-shadow:var(--shadow)}
+.progress-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:10px}
+.stage{background:var(--paper);border:1px solid var(--line);border-radius:16px;padding:12px;text-align:center}
+.stage b{display:block;font-size:12px;line-height:1.7}.pill{display:inline-block;margin-top:7px;padding:5px 9px;border-radius:999px;font-size:11px}
+.done{background:#dbeee2;color:#235d3f}.running{background:#f5e8c9;color:#775719}.todo{background:#eee7df;color:#776d65}
+.panel{display:none;background:var(--paper);border:1px solid var(--line);border-radius:22px;padding:22px;box-shadow:var(--shadow);margin-top:18px}
+.panel.active{display:block}.panel-head{display:flex;justify-content:space-between;gap:16px;align-items:center}.close{border:0;background:#ead9cf;color:var(--burg);border-radius:10px;padding:8px 12px;cursor:pointer}
+.province-stats{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin:16px 0}
+.prov-stat{border:1px solid var(--line);border-radius:14px;padding:12px;background:#fffdf7}.prov-stat small{display:block;color:var(--muted);margin-bottom:5px}.prov-stat strong{font-size:20px;color:var(--green)}
+.names{margin-top:12px;padding:12px;border-radius:14px;background:#f4ead8;line-height:2}
+.table-wrap{overflow:auto;background:var(--paper);border-radius:18px;border:1px solid var(--line);box-shadow:var(--shadow)}
+table{width:100%;border-collapse:collapse;min-width:1100px}th,td{padding:11px;border-bottom:1px solid var(--line);text-align:center;font-size:12px}th{background:var(--green);color:#fff;position:sticky;top:0}tr:hover{background:#faf0df}
+.progress-bar{height:8px;background:#eadfce;border-radius:20px;overflow:hidden}.progress-bar i{display:block;height:100%;background:linear-gradient(90deg,var(--gold),var(--green));border-radius:20px}
+footer{text-align:center;padding:25px;color:var(--muted);font-size:12px}
+@media(max-width:1000px){.metrics{grid-template-columns:repeat(3,1fr)}.progress-grid{grid-template-columns:repeat(4,1fr)}.province-stats{grid-template-columns:repeat(3,1fr)}}
+@media(max-width:650px){.container{padding:12px}.metrics{grid-template-columns:repeat(2,1fr)}.progress-grid{grid-template-columns:repeat(2,1fr)}.province-stats{grid-template-columns:repeat(2,1fr)}#map{height:470px}}
+</style>
+</head>
+<body>
+<header>
+  <div class="logo">🕯️</div>
+  <h1>اطلس پیشرفت طرح احیای روضه‌های خانگی</h1>
+  <p>نمایش وضعیت استان‌ها، شهرستان‌ها و شاخص‌های مشارکت</p>
+</header>
+<main class="container">
+  <div class="section-title"><h2>آمار کلان کشور</h2></div>
+  <section class="metrics" id="metrics"></section>
+
+  <div class="section-title"><h2>نقشه تعاملی استان‌ها</h2></div>
+  <div class="map-wrap"><div class="map-note">برای مشاهده اطلاعات هر استان روی آن کلیک کنید.</div><div id="map"></div></div>
+  <div class="panel" id="provincePanel">
+    <div class="panel-head"><h2 id="provTitle">استان</h2><button class="close" onclick="closeProvince()">بستن</button></div>
+    <div class="province-stats" id="provinceStats"></div>
+    <div class="names" id="countyNames"></div>
+    <div class="section-title"><h2>۷ گام پیشرفت</h2></div>
+    <div class="progress-grid" id="provinceStages"></div>
+  </div>
+
+  <div class="section-title"><h2>وضعیت ۷ گام طرح</h2></div>
+  <div class="card">
+    <div class="progress-grid" id="overallStages"></div>
+  </div>
+
+  <div class="section-title"><h2>جدول استان‌ها</h2></div>
+  <div class="table-wrap"><table><thead id="thead"></thead><tbody id="tbody"></tbody></table></div>
+</main>
+<footer>اطلاعات این داشبورد مستقیماً از فایل مرکزی <b>data.xlsx</b> خوانده می‌شود.</footer>
+
+<script>
+const DATA_URL='data.xlsx';
+const stageCols=[
+ 'گام ۱ - شناسایی فعالان','گام ۲ - رابط استانی','گام ۳ - رابط شهرستانی',
+ 'گام ۴ - همایش استانی','گام ۵ - توانمندسازی','گام ۶ - اقدام و استمرار','گام ۷ - ارزیابی و توسعه'
+];
+const metricDefs=[
+ ['تعداد استان‌های فعال','activeProvinces'],
+ ['تعداد رابطان استانی','stateLiaisons'],
+ ['تعداد شهرستان‌های فعال','activeCounties'],
+ ['تعداد رابطان شهرستانی','countyLiaisons'],
+ ['تعداد هیأت‌ها و مجموعه‌های شناسایی‌شده','groups'],
+ ['تعداد روضه‌های خانگی فعال','activeRuzeh'],
+ ['تعداد روضه‌های خانگی برگزارشده','heldRuzeh'],
+ ['تعداد مخاطبان','audience'],
+ ['تعداد خانواده‌های مشارکت‌کننده','families']
+];
+let rows=[],map,geoLayer;
+
+const faNum=n=>Number(n||0).toLocaleString('fa-IR');
+function norm(s){return String(s||'').trim().replace(/ي/g,'ی').replace(/ك/g,'ک').replace(/\u200c/g,'').replace(/ة/g,'ه');}
+function num(v){let n=parseFloat(String(v??'').replace(/,/g,''));return isNaN(n)?0:n}
+function stageClass(v){let x=norm(v);if(x==='انجام شد')return'done';if(x==='در حال اجرا')return'running';return'todo'}
+function stageLabel(v){return norm(v)||'انجام نشده'}
+
+function calc(){
+ const activeProvinces=rows.filter(r=>norm(r['وضعیت کلی'])!=='شروع نشده' && norm(r['استان'])).length;
+ const stateLiaisons=rows.filter(r=>norm(r['رابط استانی'])==='دارد').length;
+ const sum=k=>rows.reduce((a,r)=>a+num(r[k]),0);
+ return {activeProvinces,stateLiaisons,activeCounties:sum('تعداد شهرستان‌های فعال'),
+ countyLiaisons:sum('تعداد رابطان شهرستانی'),groups:sum('تعداد هیأت‌ها و مجموعه‌های شناسایی‌شده'),
+ activeRuzeh:sum('تعداد روضه‌های خانگی فعال'),heldRuzeh:sum('تعداد روضه‌های خانگی برگزارشده'),
+ audience:sum('تعداد مخاطبان'),families:sum('تعداد خانواده‌های مشارکت‌کننده')};
+}
+function renderMetrics(){
+ const d=calc(); document.getElementById('metrics').innerHTML=metricDefs.map(([l,k])=>`<div class="card"><div class="label">${l}</div><div class="num">${faNum(d[k])}</div></div>`).join('');
+}
+function renderOverallStages(){
+ const vals=stageCols.map(c=>rows.reduce((a,r)=>a+(norm(r[c])==='انجام شد'?1:norm(r[c])==='در حال اجرا'?.5:0),0)/(rows.length||1));
+ document.getElementById('overallStages').innerHTML=stageCols.map((c,i)=>`<div class="stage"><b>${c}</b><span class="pill ${vals[i]>=1?'done':vals[i]>.0?'running':'todo'}">${Math.round(vals[i]*100)}٪</span></div>`).join('');
+}
+function renderTable(){
+ const cols=['استان','رابط استانی','تعداد شهرستان‌های فعال','تعداد رابطان شهرستانی','تعداد هیأت‌ها و مجموعه‌های شناسایی‌شده','تعداد روضه‌های خانگی فعال','تعداد روضه‌های خانگی برگزارشده','تعداد مخاطبان','تعداد خانواده‌های مشارکت‌کننده','درصد پیشرفت کلی'];
+ document.getElementById('thead').innerHTML='<tr>'+cols.map(c=>`<th>${c}</th>`).join('')+'</tr>';
+ document.getElementById('tbody').innerHTML=rows.map(r=>`<tr onclick="openProvince('${String(r['استان']).replace(/'/g,"\\'")}')" style="cursor:pointer">
+ <td><b>${r['استان']||''}</b></td><td>${r['رابط استانی']||'—'}</td><td>${faNum(r['تعداد شهرستان‌های فعال'])}</td><td>${faNum(r['تعداد رابطان شهرستانی'])}</td>
+ <td>${faNum(r['تعداد هیأت‌ها و مجموعه‌های شناسایی‌شده'])}</td><td>${faNum(r['تعداد روضه‌های خانگی فعال'])}</td>
+ <td>${faNum(r['تعداد روضه‌های خانگی برگزارشده'])}</td><td>${faNum(r['تعداد مخاطبان'])}</td><td>${faNum(r['تعداد خانواده‌های مشارکت‌کننده'])}</td>
+ <td><div class="progress-bar"><i style="width:${Math.min(100,Math.max(0,num(r['درصد پیشرفت کلی'])*100))}%"></i></div></td></tr>`).join('');
+}
+function openProvince(name){
+ const r=rows.find(x=>norm(x['استان'])===norm(name)); if(!r)return;
+ document.getElementById('provincePanel').classList.add('active');document.getElementById('provTitle').textContent='استان '+r['استان'];
+ const defs=[
+ ['رابط استانی',r['رابط استانی']||'—'],['تعداد شهرستان‌های فعال',faNum(r['تعداد شهرستان‌های فعال'])],
+ ['تعداد رابطان شهرستانی',faNum(r['تعداد رابطان شهرستانی'])],['تعداد هیأت‌ها و مجموعه‌های شناسایی‌شده',faNum(r['تعداد هیأت‌ها و مجموعه‌های شناسایی‌شده'])],
+ ['تعداد روضه‌های خانگی فعال',faNum(r['تعداد روضه‌های خانگی فعال'])],['تعداد روضه‌های خانگی برگزارشده',faNum(r['تعداد روضه‌های خانگی برگزارشده'])],
+ ['تعداد مخاطبان',faNum(r['تعداد مخاطبان'])],['تعداد خانواده‌های مشارکت‌کننده',faNum(r['تعداد خانواده‌های مشارکت‌کننده'])]
+ ];
+ document.getElementById('provinceStats').innerHTML=defs.map(([a,b])=>`<div class="prov-stat"><small>${a}</small><strong>${b}</strong></div>`).join('');
+ const names=String(r['نام شهرستان‌های فعال']||'').trim();
+ document.getElementById('countyNames').innerHTML=names?`<b>شهرستان‌های فعال:</b> ${names}`:'<b>شهرستان‌های فعال:</b> نام شهرستان‌ها هنوز ثبت نشده است.';
+ document.getElementById('provinceStages').innerHTML=stageCols.map(c=>`<div class="stage"><b>${c}</b><span class="pill ${stageClass(r[c])}">${stageLabel(r[c])}</span></div>`).join('');
+ document.getElementById('provincePanel').scrollIntoView({behavior:'smooth',block:'start'});
+}
+function closeProvince(){document.getElementById('provincePanel').classList.remove('active')}
+
+function colorFor(p){
+ const v=num(p['درصد پیشرفت کلی']); const x=v<=1?v*100:v;
+ if(x>=80)return '#315f4b'; if(x>=60)return '#5f806b'; if(x>=40)return '#9a8a55'; if(x>=20)return '#c49a52'; return '#d9c8aa';
+}
+async function initMap(){
+ map=L.map('map',{zoomControl:true,scrollWheelZoom:false}).setView([32.2,53.7],5);
+ L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{attribution:'© OpenStreetMap'}).addTo(map);
+ try{
+  const res=await fetch('https://raw.githubusercontent.com/ahmadrezamustafa/iran-geojson/master/iran_provinces.geojson');
+  if(!res.ok)throw new Error('geo');
+  const geo=await res.json();
+  geoLayer=L.geoJSON(geo,{
+   style:f=>({color:'#fffaf0',weight:1.2,fillColor:colorFor(rows.find(r=>norm(r['استان'])===norm(f.properties.name))||{}),fillOpacity:.82}),
+   onEachFeature:(f,l)=>{const r=rows.find(x=>norm(x['استان'])===norm(f.properties.name));l.bindTooltip(f.properties.name||'استان');if(r)l.on('click',()=>openProvince(r['استان']));}
+  }).addTo(map);
+ }catch(e){
+  L.marker([35.7,51.4]).addTo(map).bindPopup('برای نمایش نقشه استان‌ها، فایل GeoJSON باید در دسترس باشد.').openPopup();
+ }
+}
+async function loadData(){
+ const res=await fetch(DATA_URL+'?v='+Date.now()); const buf=await res.arrayBuffer();
+ const wb=XLSX.read(buf,{type:'array'}); const ws=wb.Sheets['اطلاعات استان‌ها']||wb.Sheets[wb.SheetNames[0]];
+ rows=XLSX.utils.sheet_to_json(ws,{defval:''});
+ renderMetrics();renderOverallStages();renderTable();await initMap();
+}
+loadData().catch(err=>{document.getElementById('metrics').innerHTML='<div class="card" style="grid-column:1/-1">خطا در خواندن data.xlsx. مطمئن شوید فایل در کنار index.html و با همین نام قرار دارد.</div>';console.error(err)});
+</script>
+</body></html>
